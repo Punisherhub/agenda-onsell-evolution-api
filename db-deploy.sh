@@ -16,91 +16,49 @@ echo "✅ DATABASE_CONNECTION_URI encontrada"
 echo "📊 Banco: $(echo $DATABASE_CONNECTION_URI | cut -d '@' -f 2 | cut -d '/' -f 1)"
 echo ""
 
-# NOVO: Verificar se as tabelas da Evolution API já existem
-echo "🔍 Verificando se migrations já foram aplicadas..."
-TABLE_CHECK=$(psql "$DATABASE_CONNECTION_URI" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Instance', 'Message', 'Contact', 'Chat', 'Webhook');" 2>/dev/null || echo "0")
-
-if [ "$TABLE_CHECK" -ge "3" ]; then
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "✅ TABELAS JÁ EXISTEM - PULANDO MIGRATIONS"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "As seguintes tabelas da Evolution API já estão criadas:"
-  echo "   • Instance, Message, Contact, Chat, Webhook"
-  echo ""
-  echo "🚀 Migrations não são necessárias neste deploy"
-  echo "📋 Apenas o Prisma Client será gerado no próximo passo"
-  echo ""
-  exit 0
-fi
-
-echo "📝 Tabelas da Evolution API não encontradas, rodando migrations..."
+# BANCO COMPARTILHADO: Usar db push direto (mais robusto)
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 BANCO COMPARTILHADO COM AGENDAONSELL"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "✅ Usando 'db push' para sincronizar schema"
+echo "   (Não afeta tabelas existentes do AgendaOnSell)"
 echo ""
 
-# Tentar rodar migrations normalmente primeiro
-echo "Tentando rodar migrations do Prisma..."
-node runWithProvider.js "rm -rf ./prisma/migrations && cp -r ./prisma/DATABASE_PROVIDER-migrations ./prisma/migrations && npx prisma migrate deploy --schema ./prisma/DATABASE_PROVIDER-schema.prisma" 2>&1 | tee /tmp/migration.log
+cd /evolution
 
-# Verificar se falhou com P3005 (banco não vazio)
-if grep -q "P3005" /tmp/migration.log; then
+# Usar db push direto - idempotente e seguro para banco compartilhado
+DATABASE_CONNECTION_URI="$DATABASE_CONNECTION_URI" npx prisma db push \
+  --skip-generate \
+  --accept-data-loss \
+  --schema ./prisma/postgresql-schema.prisma 2>&1 || {
   echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "⚠️  BANCO COMPARTILHADO DETECTADO (Erro P3005)"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "❌ ERRO: Falha ao aplicar schema da Evolution API"
   echo ""
-  echo "📊 O banco 'agenda_db' já contém tabelas do AgendaOnSell"
-  echo "✅ Aplicando schema da Evolution API sem afetar tabelas existentes..."
+  echo "Possíveis causas:"
+  echo "  1. DATABASE_CONNECTION_URI incorreta"
+  echo "  2. Usuário do banco sem permissão CREATE TABLE"
+  echo "  3. Conflito de nomes de tabelas"
   echo ""
-
-  # Usar db push para criar apenas as tabelas da Evolution API
-  cd /evolution
-  DATABASE_CONNECTION_URI="$DATABASE_CONNECTION_URI" npx prisma db push \
-    --skip-generate \
-    --accept-data-loss \
-    --schema ./prisma/postgresql-schema.prisma 2>&1 || {
-    echo ""
-    echo "❌ ERRO: Falha ao aplicar schema da Evolution API"
-    echo ""
-    echo "Possíveis causas:"
-    echo "  1. DATABASE_CONNECTION_URI incorreta"
-    echo "  2. Usuário do banco sem permissão CREATE TABLE"
-    echo "  3. Conflito de nomes de tabelas"
-    echo ""
-    echo "Verifique as variáveis de ambiente no Render Dashboard"
-    exit 1
-  }
-
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "✅ SUCESSO: Schema da Evolution API aplicado!"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  echo "📋 Tabelas da Evolution API criadas:"
-  echo "   • Instance (conexões WhatsApp)"
-  echo "   • Message (mensagens)"
-  echo "   • Contact (contatos)"
-  echo "   • Chat (conversas)"
-  echo "   • Webhook (webhooks)"
-  echo "   • Session (sessões)"
-  echo ""
-  echo "✅ Tabelas do AgendaOnSell mantidas intactas:"
-  echo "   • empresas, estabelecimentos, users, clientes"
-  echo "   • servicos, agendamentos, materiais, etc."
-  echo ""
-  exit 0
-
-elif grep -q "error" /tmp/migration.log || grep -q "Error" /tmp/migration.log; then
-  echo ""
-  echo "❌ ERRO ao executar migrations do Prisma"
-  echo ""
-  echo "Verifique os logs acima para detalhes"
-  echo "Certifique-se de que DATABASE_CONNECTION_URI está correta"
+  echo "Verifique as variáveis de ambiente no Render Dashboard"
   exit 1
-fi
+}
 
-# Se chegou aqui, migrations rodaram com sucesso
 echo ""
-echo "✅ Migrations do Prisma executadas com sucesso!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ SUCESSO: Schema da Evolution API sincronizado!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📋 Tabelas da Evolution API:"
+echo "   • Instance (conexões WhatsApp)"
+echo "   • Message (mensagens)"
+echo "   • Contact (contatos)"
+echo "   • Chat (conversas)"
+echo "   • Webhook (webhooks)"
+echo "   • Session (sessões)"
+echo ""
+echo "✅ Tabelas do AgendaOnSell intactas:"
+echo "   • empresas, estabelecimentos, users, clientes"
+echo "   • servicos, agendamentos, materiais, etc."
 echo ""
 exit 0
