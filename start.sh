@@ -17,21 +17,23 @@ fi
 
 echo "DATABASE_URL encontrada: postgresql://***:***@$(echo $DATABASE_URL | cut -d '@' -f 2)"
 
-# CRÍTICO: Exportar explicitamente as variáveis de ambiente
-# para garantir que npm scripts as usem
+# CRÍTICO: O schema do Prisma procura por DATABASE_CONNECTION_URI, não DATABASE_URL
+# Criar alias para compatibilidade
+export DATABASE_CONNECTION_URI="$DATABASE_URL"
 export DATABASE_URL="$DATABASE_URL"
 export DATABASE_PROVIDER="${DATABASE_PROVIDER:-postgresql}"
 export DATABASE_ENABLED="${DATABASE_ENABLED:-true}"
 export SERVER_PORT="${SERVER_PORT:-8080}"
 
 echo "Variáveis exportadas:"
+echo "  DATABASE_CONNECTION_URI=$DATABASE_CONNECTION_URI (alias de DATABASE_URL)"
 echo "  DATABASE_PROVIDER=$DATABASE_PROVIDER"
 echo "  DATABASE_ENABLED=$DATABASE_ENABLED"
 echo "  SERVER_PORT=$SERVER_PORT"
 
-# Executar migrations do Prisma com DATABASE_URL forçada
+# Executar migrations do Prisma com DATABASE_CONNECTION_URI forçada
 echo "Executando migrations do Prisma..."
-DATABASE_URL="$DATABASE_URL" npm run db:deploy || {
+DATABASE_CONNECTION_URI="$DATABASE_URL" npm run db:deploy || {
   echo "ERRO: Falha nas migrations do Prisma"
   echo "Verifique se DATABASE_URL está correta e acessível"
   exit 1
