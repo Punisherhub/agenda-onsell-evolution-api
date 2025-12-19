@@ -2,7 +2,7 @@ services:
   - type: web
     name: agenda-onsell-evolution-api
     runtime: docker
-    plan: starter
+    plan: free
     region: virginia
     dockerfilePath: ./Dockerfile
     dockerContext: ./
