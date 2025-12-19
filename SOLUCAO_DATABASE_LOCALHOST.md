@@ -1,22 +1,34 @@
 # ✅ SOLUÇÃO: Erro "Can't reach database server at localhost:5432"
 
-## 🔴 O Problema
+## 🔴 O Problema (Descoberto!)
 
-O erro ocorre porque a imagem Docker `atendai/evolution-api` executa `npm run db:deploy` (migrations do Prisma) **durante o build ou startup**, ANTES de garantir que a variável `DATABASE_URL` está disponível.
+O erro **NÃO é** falta de variáveis de ambiente. O problema é que a imagem Docker `atendai/evolution-api:v2.1.1` contém um arquivo **`.env` interno** que está sendo carregado e **sobrescrevendo** as variáveis de ambiente configuradas no Render!
 
-Isso faz o Prisma tentar conectar em `localhost:5432` (valor padrão) ao invés de usar a URL correta do PostgreSQL.
+### Evidência do Problema:
+
+Nos logs do Render, você vê:
+```
+Database URL: postgresql://sasconv_user:d5DezoH9fkvGQvAldNebbIAU0FWcm4Fe@dpg-...  ✅ CORRETO
+...
+Environment variables loaded from .env  ⚠️ Arquivo .env interno sendo lido!
+Datasource "db": PostgreSQL database "evolution", schema "public" at "localhost:5432"  ❌ ERRADO!
+```
+
+A variável do Render é **sobrescrita** pelo `.env` interno da imagem!
 
 ## ✅ A Solução
 
-Criamos um **script de inicialização customizado** (`start.sh`) que:
-1. Verifica se `DATABASE_URL` existe
-2. Executa migrations apenas em **runtime** (quando variáveis estão disponíveis)
-3. Inicia o servidor
+Criamos um **script de inicialização customizado** que:
+1. **Remove** os arquivos `.env` internos da imagem (durante build E runtime)
+2. **Exporta explicitamente** as variáveis de ambiente do Render
+3. **Força** o Prisma a usar `DATABASE_URL` do Render (não do .env)
+4. Executa migrations com a URL correta
+5. Inicia o servidor
 
 ### Arquivos Modificados
 
-1. **`Dockerfile`** - Atualizado para usar o `start.sh`
-2. **`start.sh`** - Script que garante DATABASE_URL antes das migrations
+1. **`Dockerfile`** - Remove `.env` interno da imagem + usa `start.sh`
+2. **`start.sh`** - Remove `.env` em runtime + exporta variáveis + força DATABASE_URL
 
 ## 🚀 Como Fazer o Deploy Agora
 
@@ -166,13 +178,22 @@ No Render Dashboard → **Logs** → **Deploy Logs**
 
 ```
 === Iniciando Evolution API ===
+Workdir: /evolution
+Removendo arquivos .env locais...
 DATABASE_URL encontrada: postgresql://***:***@dpg-xxx.virginia-postgres.render.com:5432/agenda_db
+Variáveis exportadas:
+  DATABASE_PROVIDER=postgresql
+  DATABASE_ENABLED=true
+  SERVER_PORT=8080
 Executando migrations do Prisma...
 Prisma schema loaded from prisma/postgresql-schema.prisma
 Datasource "db": PostgreSQL database "agenda_db", schema "public" at "dpg-xxx.virginia-postgres.render.com:5432"
 ✅ Migrations deployed successfully
+✅ Migrations executadas com sucesso!
 Iniciando servidor Evolution API na porta 8080...
 ```
+
+**Observe:** NÃO aparece mais `Environment variables loaded from .env`!
 
 ### ❌ Logs de Erro (se ainda aparecer):
 
