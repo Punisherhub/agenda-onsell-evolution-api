@@ -16,6 +16,28 @@ echo "✅ DATABASE_CONNECTION_URI encontrada"
 echo "📊 Banco: $(echo $DATABASE_CONNECTION_URI | cut -d '@' -f 2 | cut -d '/' -f 1)"
 echo ""
 
+# NOVO: Verificar se as tabelas da Evolution API já existem
+echo "🔍 Verificando se migrations já foram aplicadas..."
+TABLE_CHECK=$(psql "$DATABASE_CONNECTION_URI" -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('Instance', 'Message', 'Contact', 'Chat', 'Webhook');" 2>/dev/null || echo "0")
+
+if [ "$TABLE_CHECK" -ge "3" ]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "✅ TABELAS JÁ EXISTEM - PULANDO MIGRATIONS"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "As seguintes tabelas da Evolution API já estão criadas:"
+  echo "   • Instance, Message, Contact, Chat, Webhook"
+  echo ""
+  echo "🚀 Migrations não são necessárias neste deploy"
+  echo "📋 Apenas o Prisma Client será gerado no próximo passo"
+  echo ""
+  exit 0
+fi
+
+echo "📝 Tabelas da Evolution API não encontradas, rodando migrations..."
+echo ""
+
 # Tentar rodar migrations normalmente primeiro
 echo "Tentando rodar migrations do Prisma..."
 node runWithProvider.js "rm -rf ./prisma/migrations && cp -r ./prisma/DATABASE_PROVIDER-migrations ./prisma/migrations && npx prisma migrate deploy --schema ./prisma/DATABASE_PROVIDER-schema.prisma" 2>&1 | tee /tmp/migration.log

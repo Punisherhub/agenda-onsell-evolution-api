@@ -1,5 +1,6 @@
 # Evolution API - Dockerfile para Deploy no Render
-FROM atendai/evolution-api:v2.1.1
+# Usando versão latest para evitar bugs da v2.1.1
+FROM atendai/evolution-api:latest
 
 # Criar diretórios necessários
 RUN mkdir -p /evolution/instances /evolution/store
