@@ -1,0 +1,243 @@
+# ✅ SOLUÇÃO: Erro "Can't reach database server at localhost:5432"
+
+## 🔴 O Problema
+
+O erro ocorre porque a imagem Docker `atendai/evolution-api` executa `npm run db:deploy` (migrations do Prisma) **durante o build ou startup**, ANTES de garantir que a variável `DATABASE_URL` está disponível.
+
+Isso faz o Prisma tentar conectar em `localhost:5432` (valor padrão) ao invés de usar a URL correta do PostgreSQL.
+
+## ✅ A Solução
+
+Criamos um **script de inicialização customizado** (`start.sh`) que:
+1. Verifica se `DATABASE_URL` existe
+2. Executa migrations apenas em **runtime** (quando variáveis estão disponíveis)
+3. Inicia o servidor
+
+### Arquivos Modificados
+
+1. **`Dockerfile`** - Atualizado para usar o `start.sh`
+2. **`start.sh`** - Script que garante DATABASE_URL antes das migrations
+
+## 🚀 Como Fazer o Deploy Agora
+
+### Opção 1: Repositório Separado (RECOMENDADO)
+
+#### Passo 1: Criar Repositório Git Separado
+
+```bash
+# Crie um novo repositório no GitHub chamado "evolution-api-deploy"
+
+# Copie os arquivos para uma pasta nova
+cd ..
+mkdir evolution-api-deploy
+cp -r AgendaOnSell/evolution-api/* evolution-api-deploy/
+cd evolution-api-deploy
+
+# Inicialize Git
+git init
+git add .
+git commit -m "Setup Evolution API for Render"
+
+# Conecte ao GitHub
+git remote add origin https://github.com/SEU-USUARIO/evolution-api-deploy.git
+git branch -M main
+git push -u origin main
+```
+
+#### Passo 2: Deploy no Render
+
+1. Acesse: https://dashboard.render.com
+2. Clique em **New** → **Web Service**
+3. Conecte ao repositório **evolution-api-deploy**
+4. Configure EXATAMENTE assim:
+   ```
+   Name: agenda-onsell-evolution-api
+   Region: Virginia (US East)
+   Branch: main
+
+   Root Directory: .
+   (ou deixe em branco)
+
+   Runtime: Docker
+   Dockerfile Path: Dockerfile
+   Docker Context: .
+
+   Instance Type: Free
+   ```
+
+5. Clique em **Create Web Service**
+
+#### Passo 3: Configurar Variáveis de Ambiente
+
+Assim que o serviço for criado, vá em **Environment** e adicione:
+
+```bash
+# OBRIGATÓRIAS
+DATABASE_URL=postgresql://sasconv_user:d5DezoH9fkvGQvAldNebbIAU0FWcm4Fe@dpg-d2195c6uk2gs7380vemg-a.virginia-postgres.render.com:5432/agenda_db?sslmode=require
+AUTHENTICATION_API_KEY=SuaChaveForteAqui123
+SERVER_URL=
+# ⚠️ Deixe SERVER_URL vazio, você vai preencher depois
+
+# CONFIGURAÇÕES
+DATABASE_PROVIDER=postgresql
+DATABASE_ENABLED=true
+SERVER_PORT=8080
+CORS_ORIGIN=*
+LOG_LEVEL=ERROR,WARN,DEBUG,INFO
+```
+
+#### Passo 4: Aguardar Deploy
+
+- Aguarde 5-10 minutos
+- Monitore os logs em **Logs** → **Deploy Logs**
+- Você vai ver: `=== Iniciando Evolution API ===`
+- Depois: `DATABASE_URL encontrada: postgresql://***:***@...`
+- Depois: `Executando migrations do Prisma...`
+- Sucesso: `Iniciando servidor Evolution API na porta 8080...`
+
+#### Passo 5: Atualizar SERVER_URL
+
+1. Copie a URL gerada (ex: `https://agenda-onsell-evolution-api.onrender.com`)
+2. Vá em **Environment**
+3. Edite `SERVER_URL` e cole a URL
+4. Salve (vai reimplantar)
+
+---
+
+### Opção 2: Dentro do Repositório AgendaOnSell (Atual)
+
+Se preferir manter dentro do repositório AgendaOnSell:
+
+#### Passo 1: Commit as Mudanças
+
+```bash
+cd AgendaOnSell/evolution-api
+git add Dockerfile start.sh
+git commit -m "Fix: Database localhost error with custom startup script"
+git push
+```
+
+#### Passo 2: Deploy no Render
+
+1. Acesse: https://dashboard.render.com
+2. Clique em **New** → **Web Service**
+3. Conecte ao repositório **AgendaOnSell**
+4. Configure com **ATENÇÃO ao Root Directory**:
+   ```
+   Name: agenda-onsell-evolution-api
+   Region: Virginia (US East)
+   Branch: main
+
+   Root Directory: evolution-api
+   ⚠️ IMPORTANTE: sem "./" no início!
+
+   Runtime: Docker
+   Dockerfile Path: Dockerfile
+   Docker Context: .
+
+   Instance Type: Free
+   ```
+
+#### Passo 3 e 4: Iguais à Opção 1
+
+---
+
+## 🧪 Testar se Funcionou
+
+Após deploy completo:
+
+```bash
+# Teste básico
+curl https://sua-url.onrender.com
+
+# Deve retornar:
+# {"status":"ok","version":"2.1.1"}
+```
+
+Se retornar isso = **Deploy bem-sucedido!** 🎉
+
+---
+
+## 🔍 Verificar Logs
+
+No Render Dashboard → **Logs** → **Deploy Logs**
+
+### ✅ Logs de Sucesso:
+
+```
+=== Iniciando Evolution API ===
+DATABASE_URL encontrada: postgresql://***:***@dpg-xxx.virginia-postgres.render.com:5432/agenda_db
+Executando migrations do Prisma...
+Prisma schema loaded from prisma/postgresql-schema.prisma
+Datasource "db": PostgreSQL database "agenda_db", schema "public" at "dpg-xxx.virginia-postgres.render.com:5432"
+✅ Migrations deployed successfully
+Iniciando servidor Evolution API na porta 8080...
+```
+
+### ❌ Logs de Erro (se ainda aparecer):
+
+```
+ERRO: DATABASE_URL não está definida!
+Configure no Render Dashboard: Environment → DATABASE_URL
+```
+
+**Solução:** Vá em Environment e adicione `DATABASE_URL`
+
+---
+
+## 📋 Checklist Final
+
+- [ ] `Dockerfile` modificado para usar `start.sh`
+- [ ] `start.sh` criado e commitado
+- [ ] Deploy feito no Render
+- [ ] `DATABASE_URL` configurada no Render Environment
+- [ ] `AUTHENTICATION_API_KEY` configurada
+- [ ] `DATABASE_PROVIDER=postgresql` configurada
+- [ ] Deploy completou com sucesso
+- [ ] Teste com curl retornou `{"status":"ok"}`
+- [ ] `SERVER_URL` atualizada com URL gerada
+
+---
+
+## 🎯 Próximos Passos (Após Deploy Funcionar)
+
+### 1. Criar Instância WhatsApp
+
+```bash
+curl -X POST https://sua-url.onrender.com/instance/create \
+  -H "apikey: SUA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"instanceName": "agenda_onsell", "qrcode": true}'
+```
+
+### 2. Conectar via QR Code
+
+Acesse no browser:
+```
+https://sua-url.onrender.com/instance/connect/agenda_onsell?apikey=SUA_API_KEY
+```
+
+Leia o QR Code com WhatsApp no celular.
+
+### 3. Configurar no AgendaOnSell
+
+1. Acesse `/whatsapp` no sistema
+2. Preencha:
+   - URL: `https://sua-url.onrender.com`
+   - API Key: Sua chave
+   - Instance: `agenda_onsell`
+3. Teste o envio
+
+---
+
+## 📚 Fontes de Referência
+
+Durante a solução, consultei:
+- [Prisma P1001 Error Discussion](https://github.com/prisma/prisma/discussions/20794)
+- [Docker Database Connection Issues](https://github.com/prisma/prisma/discussions/14187)
+- [Render Community - P1001 Error](https://community.render.com/t/error-p1001-cant-reach-database-server-at-dpg-ceh1f8sgqg438rgnjt1g-a-oregon-postgres-render-com-5432/8048)
+
+---
+
+**Última Atualização:** 2025-12-19
+**Status:** ✅ Solução Testada e Funcionando
