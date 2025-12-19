@@ -4,19 +4,43 @@ Este diretório contém a configuração do Evolution API, um serviço separado 
 
 ## 🚀 Deploy no Render
 
-### 1. Criar Web Service no Render
+### Opção 1: Deploy Automático (Recomendado)
 
-1. Acesse https://dashboard.render.com
+**A pasta `evolution-api/` contém um arquivo `render.yaml` que configura tudo automaticamente!**
+
+1. **Commite os arquivos**:
+   ```bash
+   git add evolution-api/
+   git commit -m "Add Evolution API service"
+   git push
+   ```
+
+2. **Acesse o Render**:
+   - Vá para https://dashboard.render.com
+   - Clique em **New** → **Blueprint**
+   - Conecte ao seu repositório Git
+   - Selecione o repositório `AgendaOnSell`
+   - O Render detectará automaticamente o `render.yaml`
+   - Clique em **Apply**
+
+3. **Configure as variáveis de ambiente obrigatórias**:
+   - `SERVER_URL`: `https://seu-servico.onrender.com` (você receberá essa URL após criar)
+   - `DATABASE_URL`: Cole a mesma URL do PostgreSQL do backend (Render)
+   - `AUTHENTICATION_API_KEY`: Gere uma chave forte (veja abaixo)
+
+### Opção 2: Deploy Manual
+
+1. **Acesse https://dashboard.render.com**
 2. Clique em **New** → **Web Service**
 3. Conecte ao seu repositório Git
-4. Configure:
+4. **IMPORTANTE - Configure exatamente assim**:
    - **Name**: `agenda-onsell-evolution-api`
    - **Region**: `Virginia (US East)` (mesma do banco)
    - **Branch**: `main`
-   - **Root Directory**: `evolution-api`
+   - **Root Directory**: `./evolution-api` ⚠️ **ATENÇÃO: com "./"**
    - **Runtime**: `Docker`
-   - **Docker Build Context**: `evolution-api`
-   - **Docker Command**: (deixe em branco - usa padrão da imagem)
+   - **Dockerfile Path**: `./evolution-api/Dockerfile`
+   - **Docker Context**: `./evolution-api`
    - **Instance Type**: `Free` ou `Starter` ($7/mês)
 
 ### 2. Configurar Variáveis de Ambiente
@@ -234,6 +258,45 @@ EVOLUTION_API_KEY=sua_api_key_aqui
 
 ## 🐛 Troubleshooting
 
+### ❌ Erro: "invalid local: resolve: lstat /opt/render/project/src/evolution-api: no such file or directory"
+
+**Este é o erro mais comum!** Acontece quando o Render não consegue encontrar a pasta `evolution-api`. Soluções:
+
+#### Solução 1: Use Blueprint (Mais Fácil)
+1. Certifique-se de que o arquivo `render.yaml` está em `evolution-api/render.yaml`
+2. Commite tudo: `git add . && git commit -m "Add evolution-api" && git push`
+3. No Render, use **New → Blueprint** (não Web Service)
+4. Selecione seu repositório
+5. O Render detectará automaticamente o `render.yaml`
+
+#### Solução 2: Configure Root Directory Corretamente
+Se estiver usando **New → Web Service**:
+1. Em **Root Directory**, coloque **exatamente**: `./evolution-api` (com `./` no início!)
+2. Em **Dockerfile Path**, coloque: `./evolution-api/Dockerfile`
+3. Em **Docker Context**, coloque: `./evolution-api`
+4. **NÃO** use apenas `evolution-api` (sem `./`)
+
+#### Solução 3: Mova para Repositório Separado (Mais Limpo)
+```bash
+# Crie um novo repositório só para Evolution API
+mkdir evolution-api-deploy
+cd evolution-api-deploy
+
+# Copie os arquivos
+cp -r ../AgendaOnSell/evolution-api/* .
+
+# Inicialize git
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/seu-usuario/evolution-api-deploy.git
+git push -u origin main
+
+# No Render, conecte este novo repositório
+# Root Directory: ./
+# Dockerfile Path: ./Dockerfile
+```
+
 ### Serviço não inicia
 - Verifique os logs no Render Dashboard
 - Confirme que `DATABASE_URL` está correto
@@ -247,6 +310,11 @@ EVOLUTION_API_KEY=sua_api_key_aqui
 - Verifique se a instância está conectada: `/instance/connectionState/{instanceName}`
 - Confirme formato do número: `5511999999999` (DDI + DDD + número)
 - Veja os logs para erros específicos
+
+### Conexão WhatsApp cai constantemente
+- Verifique se `DATABASE_URL` está configurado (para persistência)
+- Certifique-se de estar usando PostgreSQL (não SQLite)
+- Verifique se o plano Free do Render não está hibernando (upgrade para Starter se necessário)
 
 ---
 
