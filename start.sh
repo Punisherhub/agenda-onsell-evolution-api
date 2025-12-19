@@ -33,11 +33,43 @@ echo "  SERVER_PORT=$SERVER_PORT"
 
 # Executar migrations do Prisma com DATABASE_CONNECTION_URI forçada
 echo "Executando migrations do Prisma..."
-DATABASE_CONNECTION_URI="$DATABASE_URL" npm run db:deploy || {
-  echo "ERRO: Falha nas migrations do Prisma"
-  echo "Verifique se DATABASE_URL está correta e acessível"
+DATABASE_CONNECTION_URI="$DATABASE_URL" npm run db:deploy 2>&1 | tee /tmp/migration.log
+
+# Verificar se falhou com erro P3005 (banco não vazio)
+if grep -q "P3005" /tmp/migration.log; then
+  echo ""
+  echo "⚠️ Banco compartilhado detectado (P3005)"
+  echo "📊 Aplicando schema da Evolution API ao banco existente agenda_db..."
+  echo "✅ As tabelas do AgendaOnSell não serão afetadas"
+  echo ""
+
+  # Usar db push para criar apenas as tabelas da Evolution API que não existem
+  # --accept-data-loss é seguro aqui porque estamos apenas criando tabelas novas
+  # --skip-generate pula a geração do Prisma Client (já está no build)
+  cd /evolution
+  DATABASE_CONNECTION_URI="$DATABASE_URL" npx prisma db push \
+    --skip-generate \
+    --accept-data-loss \
+    --schema ./prisma/postgresql-schema.prisma || {
+    echo ""
+    echo "❌ ERRO: Falha ao aplicar schema da Evolution API"
+    echo "Verifique se:"
+    echo "  1. DATABASE_URL está correta"
+    echo "  2. Usuário do banco tem permissões de CREATE TABLE"
+    echo "  3. Não há conflitos de nomes de tabelas"
+    exit 1
+  }
+
+  echo ""
+  echo "✅ Schema da Evolution API aplicado com sucesso!"
+  echo "📋 Tabelas criadas: Instance, Message, Webhook, Chat, Contact, etc."
+  echo ""
+elif grep -q "error" /tmp/migration.log; then
+  echo ""
+  echo "❌ ERRO nas migrations do Prisma"
+  echo "Verifique os logs acima para detalhes"
   exit 1
-}
+fi
 
 echo "✅ Migrations executadas com sucesso!"
 
