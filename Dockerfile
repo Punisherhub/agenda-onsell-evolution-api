@@ -26,4 +26,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8080 || exit 1
 
 # Usar script customizado que verifica DATABASE_URL antes de rodar migrations
-CMD ["/evolution/start.sh"]
+ENTRYPOINT ["/bin/bash", "/evolution/start.sh"]
