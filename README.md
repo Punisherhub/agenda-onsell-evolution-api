@@ -2,6 +2,37 @@
 
 Este diretório contém a configuração do Evolution API, um serviço separado para gerenciar conexões WhatsApp.
 
+---
+
+## 🚨 ALERTA CRÍTICO: PERDA DE DADOS
+
+**ANTES DE FAZER QUALQUER DEPLOY**, você DEVE:
+
+1. **Criar schema separado no PostgreSQL** (protege contra perda de dados):
+   ```bash
+   # Execute este comando NO BANCO DE DADOS (Render Dashboard ou psql):
+   psql "postgresql://sasconv_user:senha@host:5432/agenda_db?sslmode=require"
+   ```
+   ```sql
+   CREATE SCHEMA IF NOT EXISTS evolution;
+   GRANT ALL ON SCHEMA evolution TO sasconv_user;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA evolution GRANT ALL ON TABLES TO sasconv_user;
+   ```
+   **OU execute o arquivo:** `setup-evolution-schema.sql`
+
+2. **Modificar DATABASE_URL** para incluir `&schema=evolution`:
+   ```
+   postgresql://user:pass@host:5432/agenda_db?sslmode=require&schema=evolution
+   ```
+
+   ⚠️ **SEM O `&schema=evolution`, O DEPLOY VAI EXCLUIR TODAS AS TABELAS DO AGENDAONSELL!**
+
+3. **Validação automática**: O script `db-deploy.sh` agora valida se o schema está correto e BLOQUEIA o deploy se não estiver.
+
+📖 **Documentação completa**: `SOLUCAO_CRITICA_PERDA_DADOS.md`
+
+---
+
 ## 🚀 Deploy no Render
 
 ### Opção 1: Deploy Automático (Recomendado)

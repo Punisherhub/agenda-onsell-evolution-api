@@ -13,10 +13,11 @@ COPY start.sh /evolution/start.sh
 COPY db-deploy.sh /evolution/db-deploy.sh
 RUN chmod +x /evolution/start.sh /evolution/db-deploy.sh
 
-# CRÍTICO: Sobrescrever o script db:deploy no package.json
+# CRÍTICO: Sobrescrever os scripts no package.json
 # para usar nossa lógica que suporta banco compartilhado (P3005)
 WORKDIR /evolution
 RUN npm pkg set scripts.db:deploy="/evolution/db-deploy.sh"
+RUN npm pkg set scripts.start:prod="/evolution/start.sh"
 
 # Expor porta
 EXPOSE 8080

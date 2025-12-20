@@ -6,7 +6,6 @@ services:
     region: virginia
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerCommand: /evolution/start.sh
     envVars:
       - key: SERVER_URL
         sync: false

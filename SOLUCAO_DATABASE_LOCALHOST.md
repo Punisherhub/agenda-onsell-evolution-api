@@ -42,6 +42,7 @@ Criamos um **script de inicialização customizado** que:
 # Copie os arquivos para uma pasta nova
 cd ..
 mkdir evolution-api-deploy
+
 cp -r AgendaOnSell/evolution-api/* evolution-api-deploy/
 cd evolution-api-deploy
 
