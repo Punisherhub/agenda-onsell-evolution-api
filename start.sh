@@ -45,9 +45,22 @@ echo "   • DATABASE_ENABLED: $DATABASE_ENABLED"
 echo "   • SERVER_PORT: $SERVER_PORT"
 echo ""
 
-# Migrations já foram executadas pelo db-deploy.sh durante o deploy
-# Apenas iniciar o servidor
+# CRÍTICO: Executar migrations ANTES de iniciar o servidor
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔨 Aplicando Migrations do Prisma"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
+# Executar script de migrations
+bash /evolution/db-deploy.sh || {
+  echo ""
+  echo "❌ ERRO: Falha ao executar migrations!"
+  echo "Verifique os logs acima para detalhes."
+  exit 1
+}
+
+echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎯 Iniciando servidor Evolution API"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
