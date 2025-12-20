@@ -56,4 +56,4 @@ echo "🌐 Porta: $SERVER_PORT"
 echo "📡 Aguardando conexões..."
 echo ""
 
-exec node ./dist/src/main.js
+exec node ./dist/main.js
