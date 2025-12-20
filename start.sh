@@ -20,21 +20,20 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-# Verificar se DATABASE_CONNECTION_URI está definida
-if [ -z "$DATABASE_CONNECTION_URI" ]; then
-  echo ""
-  echo "❌ ERRO: DATABASE_CONNECTION_URI não está definida!"
-  echo "Configure no Render Dashboard: Environment → DATABASE_CONNECTION_URI"
-  exit 1
-fi
-
 echo "✅ DATABASE_URL encontrada"
-echo "✅ DATABASE_CONNECTION_URI encontrada"
 echo "📊 Banco: $(echo $DATABASE_URL | cut -d '@' -f 2 | cut -d '/' -f 1)"
+
+# Evolution API usa DATABASE_CONNECTION_URI internamente
+# Se não estiver definida, mapear de DATABASE_URL
+if [ -z "$DATABASE_CONNECTION_URI" ]; then
+  echo "📝 Mapeando DATABASE_URL → DATABASE_CONNECTION_URI"
+  export DATABASE_CONNECTION_URI="$DATABASE_URL"
+else
+  echo "✅ DATABASE_CONNECTION_URI já definida"
+fi
 echo ""
 
 # Exportar variáveis de ambiente
-export DATABASE_CONNECTION_URI="$DATABASE_CONNECTION_URI"
 export DATABASE_URL="$DATABASE_URL"
 export DATABASE_PROVIDER="${DATABASE_PROVIDER:-postgresql}"
 export DATABASE_ENABLED="${DATABASE_ENABLED:-true}"

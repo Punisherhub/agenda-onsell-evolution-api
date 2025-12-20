@@ -5,15 +5,15 @@ echo "=== Evolution API - Database Deploy Script ==="
 echo "Executado durante a fase de deploy do Render"
 echo ""
 
-# Verificar se DATABASE_CONNECTION_URI está definida
-if [ -z "$DATABASE_CONNECTION_URI" ]; then
-  echo "❌ ERRO: DATABASE_CONNECTION_URI não está definida!"
-  echo "Configure no Render Dashboard: Environment → DATABASE_CONNECTION_URI"
+# Verificar se DATABASE_URL está definida
+if [ -z "$DATABASE_URL" ]; then
+  echo "❌ ERRO: DATABASE_URL não está definida!"
+  echo "Configure no Render Dashboard: Environment → DATABASE_URL"
   exit 1
 fi
 
-echo "✅ DATABASE_CONNECTION_URI encontrada"
-echo "📊 Banco: $(echo $DATABASE_CONNECTION_URI | cut -d '@' -f 2 | cut -d '/' -f 1)"
+echo "✅ DATABASE_URL encontrada"
+echo "📊 Banco: $(echo $DATABASE_URL | cut -d '@' -f 2 | cut -d '/' -f 1)"
 echo ""
 
 # BANCO COMPARTILHADO: Usar db push direto (mais robusto)
@@ -28,7 +28,7 @@ echo ""
 cd /evolution
 
 # Usar db push direto - idempotente e seguro para banco compartilhado
-DATABASE_CONNECTION_URI="$DATABASE_CONNECTION_URI" npx prisma db push \
+DATABASE_URL="$DATABASE_URL" npx prisma db push \
   --skip-generate \
   --accept-data-loss \
   --schema ./prisma/postgresql-schema.prisma 2>&1 || {
@@ -36,7 +36,7 @@ DATABASE_CONNECTION_URI="$DATABASE_CONNECTION_URI" npx prisma db push \
   echo "❌ ERRO: Falha ao aplicar schema da Evolution API"
   echo ""
   echo "Possíveis causas:"
-  echo "  1. DATABASE_CONNECTION_URI incorreta"
+  echo "  1. DATABASE_URL incorreta"
   echo "  2. Usuário do banco sem permissão CREATE TABLE"
   echo "  3. Conflito de nomes de tabelas"
   echo ""
