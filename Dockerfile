@@ -9,7 +9,7 @@ RUN mkdir -p /evolution/instances /evolution/store
 RUN rm -f /evolution/.env /evolution/.env.* || true
 
 # Copiar scripts customizados
-COPY start.sh /evolution/start.sh
+COPY start-debug.sh /evolution/start.sh
 COPY db-deploy.sh /evolution/db-deploy.sh
 RUN chmod +x /evolution/start.sh /evolution/db-deploy.sh
 
