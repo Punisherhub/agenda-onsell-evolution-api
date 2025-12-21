@@ -1,5 +1,5 @@
-# Evolution API - Dockerfile para Deploy no Render
-# Usando v2.0.10 (versão estável) - latest v2.2.3 tem bug de inicialização
+# Evolution API - Dockerfile VERSÃO ESTÁVEL
+# Usando v2.0.10 (última versão estável testada)
 FROM atendai/evolution-api:v2.0.10
 
 # Criar diretórios necessários
@@ -14,7 +14,6 @@ COPY db-deploy.sh /evolution/db-deploy.sh
 RUN chmod +x /evolution/start.sh /evolution/db-deploy.sh
 
 # CRÍTICO: Sobrescrever os scripts no package.json
-# para usar nossa lógica que suporta banco compartilhado (P3005)
 WORKDIR /evolution
 RUN npm pkg set scripts.db:deploy="/evolution/db-deploy.sh"
 RUN npm pkg set scripts.start:prod="/evolution/start.sh"
@@ -26,5 +25,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8080 || exit 1
 
-# Usar script customizado que verifica DATABASE_URL antes de rodar migrations
+# Usar script customizado com DEBUG COMPLETO
 ENTRYPOINT ["/bin/bash", "/evolution/start.sh"]
