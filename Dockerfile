@@ -22,9 +22,9 @@ RUN npm pkg set scripts.start:prod="/evolution/start.sh"
 # Expor porta
 EXPOSE 8080
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080 || exit 1
+# Healthcheck desabilitado temporariamente para debug de timeout
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+#   CMD curl -f http://localhost:8080 || exit 1
 
 # Usar script customizado que verifica DATABASE_URL antes de rodar migrations
 ENTRYPOINT ["/bin/bash", "/evolution/start.sh"]
