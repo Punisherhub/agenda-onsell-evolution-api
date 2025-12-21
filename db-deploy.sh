@@ -77,6 +77,25 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "✅ SUCESSO: Schema Evolution API sincronizado!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
+
+# CRÍTICO: Gerar Prisma Client (necessário para o servidor iniciar)
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 Gerando Prisma Client"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+DATABASE_URL="$DATABASE_URL" npx prisma generate \
+  --schema ./prisma/postgresql-schema.prisma 2>&1 || {
+  echo ""
+  echo "❌ ERRO: Falha ao gerar Prisma Client"
+  echo ""
+  exit 1
+}
+
+echo ""
+echo "✅ Prisma Client gerado com sucesso!"
+echo ""
+
 echo "📋 Schema 'evolution' (Evolution API):"
 echo "   • Instance, Message, Contact, Chat"
 echo "   • Webhook, Session, MessageUpdate"
